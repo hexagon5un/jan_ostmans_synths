@@ -30,8 +30,6 @@
 const unsigned char PS_128 = (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
 
 
-
-
 //--------- Ringbuf parameters ----------
 uint8_t Ringbuffer[256];
 uint8_t RingWrite=0;
@@ -86,7 +84,6 @@ void setup()
 	//OCR1A = F_CPU / SAMPLE_RATE; 
 	// Enable interrupt when TCNT1 == OCR1A
 	TIMSK1 |= _BV(OCIE1A);   
-	sei();
 	OCR1A = 400; //40KHz Samplefreq
 
 	// Set up Timer 2 to do pulse width modulation on D11
@@ -133,172 +130,173 @@ void setup()
 	Serial.println("Modified [Jan Ostman] dsp-D8:");
 	Serial.println("https://janostman.wordpress.com/the-dsp-d8-drum-chip-source-code/");
 	Serial.println("Press asdfjkl; to play the drums.");
+
+	sei();
 }
+
+uint8_t phaccBD,phaccCH,phaccCL,phaccCR,phaccOH,phaccRD,phaccRS,phaccSD;
+uint8_t pitchBD=128;
+uint8_t pitchCH=64;
+uint8_t pitchCL=64;
+uint8_t pitchCR=16;
+uint8_t pitchOH=64;
+uint8_t pitchRD=16;
+uint8_t pitchRS=64;
+uint8_t pitchSD=64;
+uint16_t samplecntBD,samplecntCH,samplecntCL,samplecntCR,samplecntOH,samplecntRD,samplecntRS,samplecntSD;
+uint16_t samplepntBD,samplepntCH,samplepntCL,samplepntCR,samplepntOH,samplepntRD,samplepntRS,samplepntSD;
+
+uint8_t oldPORTB;
+uint8_t oldPORTD;
+
+int16_t total;
+uint8_t divider;
+uint8_t MUX=0;
+char ser=' ';
 
 void loop() 
 {  
-	uint8_t phaccBD,phaccCH,phaccCL,phaccCR,phaccOH,phaccRD,phaccRS,phaccSD;
-	uint8_t pitchBD=128;
-	uint8_t pitchCH=64;
-	uint8_t pitchCL=64;
-	uint8_t pitchCR=16;
-	uint8_t pitchOH=64;
-	uint8_t pitchRD=16;
-	uint8_t pitchRS=64;
-	uint8_t pitchSD=64;
-	uint16_t samplecntBD,samplecntCH,samplecntCL,samplecntCR,samplecntOH,samplecntRD,samplecntRS,samplecntSD;
-	uint16_t samplepntBD,samplepntCH,samplepntCL,samplepntCR,samplepntOH,samplepntRD,samplepntRS,samplepntSD;
 
-	int16_t total;
-	uint8_t oldPORTB;
-	uint8_t oldPORTD;
 
-	uint8_t divider;
-	uint8_t MUX=0;
-	char ser=' ';
-	while(1) { 
+	//------ Add current sample word to ringbuffer FIFO --------------------  
 
-		//------ Add current sample word to ringbuffer FIFO --------------------  
+	if (RingCount<255) {  //if space in ringbuffer
+		total=0;
+		if (samplecntBD) {
+			phaccBD+=pitchBD;
+			if (phaccBD & 128) {
+				phaccBD &= 127;
+				samplepntBD++;
+				samplecntBD--;
 
-		if (RingCount<255) {  //if space in ringbuffer
-			total=0;
-			if (samplecntBD) {
-				phaccBD+=pitchBD;
-				if (phaccBD & 128) {
-					phaccBD &= 127;
-					samplepntBD++;
-					samplecntBD--;
-
-				}
-				total+=(pgm_read_byte_near(BD + samplepntBD)-128);
 			}
-			if (samplecntSD) {
-				phaccSD+=pitchSD;
-				if (phaccSD & 128) {
-					phaccSD &= 127;
-					samplepntSD++;
-					samplecntSD--;
-
-				}
-				total+=(pgm_read_byte_near(SN + samplepntSD)-128);
-			}
-			if (samplecntCL) {
-				phaccCL+=pitchCL;
-				if (phaccCL & 128) {
-					phaccCL &= 127;
-					samplepntCL++;
-					samplecntCL--;
-
-				}
-				total+=(pgm_read_byte_near(CL + samplepntCL)-128);
-			}
-			if (samplecntRS) {
-				phaccRS+=pitchRS;
-				if (phaccRS & 128) {
-					phaccRS &= 127;
-					samplepntRS++;
-					samplecntRS--;
-
-				}
-				total+=(pgm_read_byte_near(RS + samplepntRS)-128);
-			}
-			if (samplecntCH) {
-				phaccCH+=pitchCH;
-				if (phaccCH & 128) {
-					phaccCH &= 127;
-					samplepntCH++;
-					samplecntCH--;
-
-				}
-				total+=(pgm_read_byte_near(CH + samplepntCH)-128);
-			}    
-			if (samplecntOH) {
-				phaccOH+=pitchOH;
-				if (phaccOH & 128) {
-					phaccOH &= 127;
-					samplepntOH++;
-					samplecntOH--;
-
-				}
-				total+=(pgm_read_byte_near(OH + samplepntOH)-128);
-			}  
-			if (samplecntCR) {
-				phaccCR+=pitchCR;
-				if (phaccCR & 128) {
-					phaccCR &= 127;
-					samplepntCR++;
-					samplecntCR--;
-
-				}
-				total+=(pgm_read_byte_near(CR + samplepntCR)-128);
-			}  
-			if (samplecntRD) {
-				phaccRD+=pitchRD;
-				if (phaccRD & 128) {
-					phaccRD &= 127;
-					samplepntRD++;
-					samplecntRD--;
-
-				}
-				total+=(pgm_read_byte_near(RD + samplepntRD)-128);
-			}  
-			total>>=1;  
-			if (!(PINB&4)) total>>=1;
-			total+=128;  
-			if (total>255) total=255;
-
-			cli();
-			Ringbuffer[RingWrite]=total;
-			RingWrite++;
-			RingCount++;
-			sei();
+			total+=(pgm_read_byte_near(BD + samplepntBD)-128);
 		}
+		if (samplecntSD) {
+			phaccSD+=pitchSD;
+			if (phaccSD & 128) {
+				phaccSD &= 127;
+				samplepntSD++;
+				samplecntSD--;
 
-		//----------------------------------------------------------------------------
-
-		//----------------- Handle Triggers ------------------------------
-		if (Serial.available() > 0) {
-			ser = Serial.read();
-			Serial.write(ser);
-			switch (ser){
-				case('a'):	
-					samplepntBD=0;
-					samplecntBD=2154;
-					break;
-				case('s'): 
-					samplepntSD=0;
-					samplecntSD=3482;
-					break;
-				case('d'): 
-					samplepntCH=0;
-					samplecntCH=482;
-					break;
-				case('f'): 
-					samplepntOH=0;
-					samplecntOH=2572;
-					break;
-				case('j'): 
-					samplepntRS=0;
-					samplecntRS=1160;
-					break;
-				case('k'): 
-					samplepntCL=0;
-					samplecntCL=2384;
-					break;
-				case('l'): 
-					samplepntRD=0;
-					samplecntRD=5066;
-					break;
-				case(';'): 
-					samplepntCR=0;
-					samplecntCR=5414;
-					break;
-				default:
-					break;
 			}
+			total+=(pgm_read_byte_near(SN + samplepntSD)-128);
 		}
+		if (samplecntCL) {
+			phaccCL+=pitchCL;
+			if (phaccCL & 128) {
+				phaccCL &= 127;
+				samplepntCL++;
+				samplecntCL--;
 
-		//-----------------------------------------------------------------
+			}
+			total+=(pgm_read_byte_near(CL + samplepntCL)-128);
+		}
+		if (samplecntRS) {
+			phaccRS+=pitchRS;
+			if (phaccRS & 128) {
+				phaccRS &= 127;
+				samplepntRS++;
+				samplecntRS--;
 
+			}
+			total+=(pgm_read_byte_near(RS + samplepntRS)-128);
+		}
+		if (samplecntCH) {
+			phaccCH+=pitchCH;
+			if (phaccCH & 128) {
+				phaccCH &= 127;
+				samplepntCH++;
+				samplecntCH--;
+
+			}
+			total+=(pgm_read_byte_near(CH + samplepntCH)-128);
+		}    
+		if (samplecntOH) {
+			phaccOH+=pitchOH;
+			if (phaccOH & 128) {
+				phaccOH &= 127;
+				samplepntOH++;
+				samplecntOH--;
+
+			}
+			total+=(pgm_read_byte_near(OH + samplepntOH)-128);
+		}  
+		if (samplecntCR) {
+			phaccCR+=pitchCR;
+			if (phaccCR & 128) {
+				phaccCR &= 127;
+				samplepntCR++;
+				samplecntCR--;
+
+			}
+			total+=(pgm_read_byte_near(CR + samplepntCR)-128);
+		}  
+		if (samplecntRD) {
+			phaccRD+=pitchRD;
+			if (phaccRD & 128) {
+				phaccRD &= 127;
+				samplepntRD++;
+				samplecntRD--;
+
+			}
+			total+=(pgm_read_byte_near(RD + samplepntRD)-128);
+		}  
+		total>>=1;  
+		if (!(PINB&4)) total>>=1;
+		total+=128;  
+		if (total>255) total=255;
+
+		cli();
+		Ringbuffer[RingWrite]=total;
+		RingWrite++;
+		RingCount++;
+		sei();
 	}
+
+	//----------------------------------------------------------------------------
+
+	//----------------- Handle Triggers ------------------------------
+	if (Serial.available() > 0) {
+		ser = Serial.read();
+		Serial.write(ser);
+		switch (ser){
+			case('a'):	
+				samplepntBD=0;
+				samplecntBD=2154;
+				break;
+			case('s'): 
+				samplepntSD=0;
+				samplecntSD=3482;
+				break;
+			case('d'): 
+				samplepntCH=0;
+				samplecntCH=482;
+				break;
+			case('f'): 
+				samplepntOH=0;
+				samplecntOH=2572;
+				break;
+			case('j'): 
+				samplepntRS=0;
+				samplecntRS=1160;
+				break;
+			case('k'): 
+				samplepntCL=0;
+				samplecntCL=2384;
+				break;
+			case('l'): 
+				samplepntRD=0;
+				samplecntRD=5066;
+				break;
+			case(';'): 
+				samplepntCR=0;
+				samplecntCR=5414;
+				break;
+			default:
+				break;
+		}
+	}
+
+	//-----------------------------------------------------------------
 }

@@ -125,19 +125,19 @@ void setup() {
 
 
 
-void loop() {  
-	uint8_t phaccAG,phaccCA,phaccMA,phaccWH,phaccTI,phaccCH,phaccQU,phaccBO;
-	uint8_t pitchAG=32;
-	uint8_t pitchCA=64;
-	uint8_t pitchMA=64;
-	uint8_t pitchWH=32;
-	uint8_t pitchTI=64;
-	uint8_t pitchCH=16;
-	uint8_t pitchQU=16;
-	uint8_t pitchBO=64;
-	uint16_t samplecntAG,samplecntCA,samplecntMA,samplecntWH,samplecntTI,samplecntCH,samplecntQU,samplecntBO;
-	uint16_t samplepntAG,samplepntCA,samplepntMA,samplepntWH,samplepntTI,samplepntCH,samplepntQU,samplepntBO;
+uint8_t phaccAG,phaccCA,phaccMA,phaccWH,phaccTI,phaccCH,phaccQU,phaccBO;
+uint8_t pitchAG=32;
+uint8_t pitchCA=64;
+uint8_t pitchMA=64;
+uint8_t pitchWH=32;
+uint8_t pitchTI=64;
+uint8_t pitchCH=16;
+uint8_t pitchQU=16;
+uint8_t pitchBO=64;
+uint16_t samplecntAG,samplecntCA,samplecntMA,samplecntWH,samplecntTI,samplecntCH,samplecntQU,samplecntBO;
+uint16_t samplepntAG,samplepntCA,samplepntMA,samplepntWH,samplepntTI,samplepntCH,samplepntQU,samplepntBO;
 
+void loop() {  
 	int16_t total;
 	uint8_t oldPORTB;
 	uint8_t oldPORTD;
@@ -146,148 +146,146 @@ void loop() {
 	uint8_t MUX=0;
 
 	char ser='o';
-	while(1) { 
-		//------ Add current sample word to ringbuffer FIFO --------------------  
-		if (RingCount<255) {  //if space in ringbuffer
-			total=0;
-			if (samplecntAG) {
-				phaccAG+=pitchAG;
-				if (phaccAG & 128) {
-					phaccAG &= 127;
-					total+=(pgm_read_byte_near(AG + samplepntAG)-128);
-					samplepntAG++;
-					samplecntAG--;
+	//------ Add current sample word to ringbuffer FIFO --------------------  
+	if (RingCount<255) {  //if space in ringbuffer
+		total=0;
+		if (samplecntAG) {
+			phaccAG+=pitchAG;
+			if (phaccAG & 128) {
+				phaccAG &= 127;
+				total+=(pgm_read_byte_near(AG + samplepntAG)-128);
+				samplepntAG++;
+				samplecntAG--;
 
-				}
 			}
-			if (samplecntBO) {
-				phaccBO+=pitchBO;
-				if (phaccBO & 128) {
-					phaccBO &= 127;
-					total+=(pgm_read_byte_near(BO + samplepntBO)-128);
-					samplepntBO++;
-					samplecntBO--;
-
-				}
-			}
-			if (samplecntMA) {
-				phaccMA+=pitchMA;
-				if (phaccMA & 128) {
-					phaccMA &= 127;
-					total+=(pgm_read_byte_near(MA + samplepntMA)-128);
-					samplepntMA++;
-					samplecntMA--;
-
-				}
-			}
-			if (samplecntQU) {
-				phaccQU+=pitchQU;
-				if (phaccQU & 128) {
-					phaccQU &= 127;
-					total+=(pgm_read_byte_near(QU + samplepntQU)-128);
-					samplepntQU++;
-					samplecntQU--;
-
-				}
-			}
-			if (samplecntCA) {
-				phaccCA+=pitchCA;
-				if (phaccCA & 128) {
-					phaccCA &= 127;
-					total+=(pgm_read_byte_near(CA + samplepntCA)-128);
-					samplepntCA++;
-					samplecntCA--;
-
-				}
-			}    
-			if (samplecntTI) {
-				phaccTI+=pitchTI;
-				if (phaccTI & 128) {
-					phaccTI &= 127;
-					total+=(pgm_read_byte_near(TI + samplepntTI)-128);
-					samplepntTI++;
-					samplecntTI--;
-
-				}
-			}  
-			if (samplecntWH) {
-				phaccWH+=pitchWH;
-				if (phaccWH & 128) {
-					phaccWH &= 127;
-					total+=(pgm_read_byte_near(WH + samplepntWH)-128);
-					samplepntWH++;
-					samplecntWH--;
-
-				}
-			}  
-			if (samplecntCH) {
-				phaccCH+=pitchCH;
-				if (phaccCH & 128) {
-					phaccCH &= 127;
-					total+=(pgm_read_byte_near(CH + samplepntCH)-128);
-					samplepntCH++;
-					samplecntCH--;
-
-				}
-			}  
-			total>>=1;  
-			if (!(PINB&4)) total>>=1;
-			total+=128;  
-			if (total>255) total=255;
-
-			cli();
-			Ringbuffer[RingWrite]=total;
-			RingWrite++;
-			RingCount++;
-			sei();
 		}
+		if (samplecntBO) {
+			phaccBO+=pitchBO;
+			if (phaccBO & 128) {
+				phaccBO &= 127;
+				total+=(pgm_read_byte_near(BO + samplepntBO)-128);
+				samplepntBO++;
+				samplecntBO--;
 
-		//----------------------------------------------------------------------------
-
-		//----------------- Handle Triggers ------------------------------
-
-		if (Serial.available()) {
-			ser = Serial.read();
-			Serial.write(ser);
-			switch(ser){
-				case('a'): 
-					samplepntBO=0;
-					samplecntBO=1474;
-					break;
-				case('s'): 
-					samplepntAG=0;
-					samplecntAG=1720;
-					break;
-				case('d'): 
-					samplepntTI=0;
-					samplecntTI=3680;
-					break;
-				case('f'): 
-					samplepntQU=0;
-					samplecntQU=6502;
-					break;
-				case('j'): 
-					samplepntMA=0;
-					samplecntMA=394;
-					break;
-				case('k'): 
-					samplepntCH=0;
-					samplecntCH=5596;
-					break;
-
-				case('l'): 
-					samplepntCA=0;
-					samplecntCA=2174;
-					break;
-				case(';'): 
-					samplepntWH=0;
-					samplecntWH=2670;
-					break;
-				default:
-					break;
 			}
+		}
+		if (samplecntMA) {
+			phaccMA+=pitchMA;
+			if (phaccMA & 128) {
+				phaccMA &= 127;
+				total+=(pgm_read_byte_near(MA + samplepntMA)-128);
+				samplepntMA++;
+				samplecntMA--;
 
+			}
+		}
+		if (samplecntQU) {
+			phaccQU+=pitchQU;
+			if (phaccQU & 128) {
+				phaccQU &= 127;
+				total+=(pgm_read_byte_near(QU + samplepntQU)-128);
+				samplepntQU++;
+				samplecntQU--;
+
+			}
+		}
+		if (samplecntCA) {
+			phaccCA+=pitchCA;
+			if (phaccCA & 128) {
+				phaccCA &= 127;
+				total+=(pgm_read_byte_near(CA + samplepntCA)-128);
+				samplepntCA++;
+				samplecntCA--;
+
+			}
+		}    
+		if (samplecntTI) {
+			phaccTI+=pitchTI;
+			if (phaccTI & 128) {
+				phaccTI &= 127;
+				total+=(pgm_read_byte_near(TI + samplepntTI)-128);
+				samplepntTI++;
+				samplecntTI--;
+
+			}
+		}  
+		if (samplecntWH) {
+			phaccWH+=pitchWH;
+			if (phaccWH & 128) {
+				phaccWH &= 127;
+				total+=(pgm_read_byte_near(WH + samplepntWH)-128);
+				samplepntWH++;
+				samplecntWH--;
+
+			}
+		}  
+		if (samplecntCH) {
+			phaccCH+=pitchCH;
+			if (phaccCH & 128) {
+				phaccCH &= 127;
+				total+=(pgm_read_byte_near(CH + samplepntCH)-128);
+				samplepntCH++;
+				samplecntCH--;
+
+			}
+		}  
+		total>>=1;  
+		if (!(PINB&4)) total>>=1;
+		total+=128;  
+		if (total>255) total=255;
+
+		cli();
+		Ringbuffer[RingWrite]=total;
+		RingWrite++;
+		RingCount++;
+		sei();
+	}
+
+	//----------------------------------------------------------------------------
+
+	//----------------- Handle Triggers ------------------------------
+
+	if (Serial.available()) {
+		ser = Serial.read();
+		Serial.write(ser);
+		switch(ser){
+			case('a'): 
+				samplepntBO=0;
+				samplecntBO=1474;
+				break;
+			case('s'): 
+				samplepntAG=0;
+				samplecntAG=1720;
+				break;
+			case('d'): 
+				samplepntTI=0;
+				samplecntTI=3680;
+				break;
+			case('f'): 
+				samplepntQU=0;
+				samplecntQU=6502;
+				break;
+			case('j'): 
+				samplepntMA=0;
+				samplecntMA=394;
+				break;
+			case('k'): 
+				samplepntCH=0;
+				samplecntCH=5596;
+				break;
+
+			case('l'): 
+				samplepntCA=0;
+				samplecntCA=2174;
+				break;
+			case(';'): 
+				samplepntWH=0;
+				samplecntWH=2670;
+				break;
+			default:
+				break;
 		}
 
 	}
+
 }
