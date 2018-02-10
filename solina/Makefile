@@ -11,13 +11,20 @@
 ## This is the name of the file (drop the .ino) you're trying to build
 TARGET = solina
 
-## The location of my arduino install.  This will probably be different for you.
+## "make" will compile the core libs and link your code against them
+## "make flash" will create a hex file and upload it to your Arduino
 
-# Linux
-ARDUINO_INSTALL = /usr/share/arduino
+## You may need to configure some stuff.
+## The location of arduino install.
+UNAME   = $(shell uname)
 
-# MacOS X
-# ARDUINO_INSTALL = /Applications/Arduino.app/Contents/Java
+ifeq ($(UNAME), Linux)
+    ARDUINO_INSTALL = /usr/share/arduino
+else ifeq ($(UNAME), FreeBSD)
+    ARDUINO_INSTALL = /usr/share/local/arduino
+else ifeq ($(UNAME), Darwin)
+    ARDUINO_INSTALL = /Applications/Arduino.app/Contents/Java
+endif
 
 ## These are standard subdirectories in Arduino.  This should work.
 ARDUINO_TOOLS   = $(ARDUINO_INSTALL)/hardware/tools/avr/bin
